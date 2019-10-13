@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.HttpsPolicy;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
@@ -26,7 +27,16 @@ namespace HealthCheckSample
         public void ConfigureServices(IServiceCollection services)
         {
             services.AddControllers();
-            services.AddHealthChecks();
+            services.AddHealthChecksUI();
+            services.AddHealthChecks()
+            .AddSqlServer(
+              connectionString: Configuration["Data:ConnectionStrings:Sql"],
+              healthQuery: "SELECT 1;",
+              name: "sql",
+              failureStatus: HealthStatus.Degraded,
+              tags: new string[] { "db", "sql", "sqlserver" })
+             .AddRedis(Configuration["Data:ConnectionStrings:Redis"])
+                .AddCheck<ExampleHealthCheck>("example_health_check");
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -46,6 +56,7 @@ namespace HealthCheckSample
             app.UseEndpoints(endpoints =>
             {
                 endpoints.MapControllers();
+                endpoints.MapHealthChecksUI();
             });
         }
     }
